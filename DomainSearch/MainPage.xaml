@@ -4,15 +4,48 @@
     x:DataType="domainSearch:ViewModel"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:domainSearch="using:DomainSearch">
+    xmlns:data="clr-namespace:DomainSearch.Data;assembly=DomainSearch.Data"
+    xmlns:domainSearch="clr-namespace:DomainSearch;assembly=DomainSearch">
 
     <ScrollView>
-        <VerticalStackLayout Padding="32">
-            <Label Text="Domain:" FontAttributes="Bold" />
-            <Label Text="{Binding Domain}" Margin="0,0,0,16" />
-            <Label Text="Registrar:" FontAttributes="Bold" />
-            <Label Text="{Binding Registrar}" />
-        </VerticalStackLayout>
+        <Grid ColumnDefinitions="*,*">
+            <VerticalStackLayout Padding="32">
+                <Label Text="Domain:" />
+                <Label
+                    Text="{Binding Domain}"
+                    FontAttributes="Bold"
+                    Margin="0,0,0,16" />
+                <Label Text="Registrar:" />
+                <Label
+                    Text="{Binding Registrar}"
+                    FontAttributes="Bold"
+                    Margin="0,0,0,16" />
+                <HorizontalStackLayout>
+                    <CheckBox IsChecked="{Binding IsAvailable, Mode=TwoWay}" />
+                    <Label Text="Is available?" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <Label Text="$/year:" />
+                <Entry Text="{Binding DollarsPerYear}" Margin="0,0,0,16" />
+                <Label Text="Notes:" />
+                <Entry Text="{Binding Notes}" Margin="0,0,0,16" />
+                <Button Text="Save" Command="{Binding SaveOfferCommand}" />
+            </VerticalStackLayout>
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Offers}" Grid.Column="1">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="data:Offer">
+                        <Label>
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="{Binding Registrar}" />
+                                    <Span Text=": " />
+                                    <Span Text="{Binding DollarsPerYear}" FontAttributes="Bold" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </Grid>
     </ScrollView>
 
 </ContentPage>
