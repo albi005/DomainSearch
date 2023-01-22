@@ -5,46 +5,105 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:data="clr-namespace:DomainSearch.Data;assembly=DomainSearch.Data"
+    xmlns:dg="clr-namespace:Maui.DataGrid;assembly=Maui.DataGrid"
     xmlns:domainSearch="clr-namespace:DomainSearch;assembly=DomainSearch">
 
     <ScrollView>
-        <Grid ColumnDefinitions="*,*">
+        <Grid ColumnDefinitions="*,320">
             <VerticalStackLayout Padding="32">
                 <Label Text="Domain:" />
                 <Label
-                    Text="{Binding Domain}"
+                    Text="{Binding Domain.Id}"
                     FontAttributes="Bold"
                     Margin="0,0,0,16" />
                 <Label Text="Registrar:" />
                 <Label
-                    Text="{Binding Registrar}"
+                    Text="{Binding Offer.Registrar}"
                     FontAttributes="Bold"
                     Margin="0,0,0,16" />
                 <HorizontalStackLayout>
-                    <CheckBox IsChecked="{Binding IsAvailable, Mode=TwoWay}" />
+                    <CheckBox IsChecked="{Binding Domain.IsAvailable, Mode=TwoWay}" />
                     <Label Text="Is available?" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <Label Text="$/year:" />
                 <Entry Text="{Binding DollarsPerYear}" Margin="0,0,0,16" />
                 <Label Text="Notes:" />
-                <Entry Text="{Binding Notes}" Margin="0,0,0,16" />
-                <Button Text="Save" Command="{Binding SaveOfferCommand}" />
+                <Editor Text="{Binding Offer.Notes}" Margin="0,0,0,16" />
+                <Button
+                    Text="Save"
+                    Command="{Binding SaveCommand}"
+                    Margin="0,0,0,32" />
+
+                <Label Text="Offers:" FontAttributes="Bold" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Offers}" Margin="0,0,0,32">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="data:Offer">
+                            <Label>
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Registrar}" />
+                                        <Span Text=": " />
+                                        <Span Text="{Binding DollarsPerYear}" FontAttributes="Bold" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label Text="TLD stats" FontAttributes="Bold" />
+                <dg:DataGrid BorderThickness="0" ItemsSource="{Binding RegistrarStats}">
+                    <dg:DataGrid.Columns>
+                        <dg:DataGridColumn Title="Registrar" PropertyName="Registrar" />
+                        <dg:DataGridColumn
+                            Title="Average"
+                            PropertyName="Avg"
+                            Width="96" />
+                        <dg:DataGridColumn
+                            Title="Min"
+                            PropertyName="Min"
+                            Width="48" />
+                        <dg:DataGridColumn
+                            Title="Max"
+                            PropertyName="Max"
+                            Width="64" />
+                    </dg:DataGrid.Columns>
+                    <dg:DataGrid.RowsBackgroundColorPalette>
+                        <dg:PaletteCollection>
+                            <Color>White</Color>
+                            <Color>LightGray</Color>
+                        </dg:PaletteCollection>
+                    </dg:DataGrid.RowsBackgroundColorPalette>
+                </dg:DataGrid>
             </VerticalStackLayout>
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Offers}" Grid.Column="1">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="data:Offer">
-                        <Label>
-                            <Label.FormattedText>
-                                <FormattedString>
-                                    <Span Text="{Binding Registrar}" />
-                                    <Span Text=": " />
-                                    <Span Text="{Binding DollarsPerYear}" FontAttributes="Bold" />
-                                </FormattedString>
-                            </Label.FormattedText>
-                        </Label>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
+            <Grid
+                ColumnDefinitions="*,*"
+                Grid.Column="1"
+                Padding="8">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Checked" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Checked}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding}" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="1" Spacing="8">
+                    <Label
+                        Text="Not checked"
+                        FontAttributes="Bold"
+                        Opacity=".7" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding NotChecked}" Grid.Column="1">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding}" Opacity=".7" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Grid>
         </Grid>
     </ScrollView>
 

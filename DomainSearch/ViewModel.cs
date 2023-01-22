@@ -14,17 +14,45 @@ namespace DomainSearch;
 
 public partial class ViewModel : ObservableObject
 {
+    private readonly string[] _possibleDomains;
     private readonly Db _db = new();
     private readonly AutomationElement _automationElement;
 
-    [ObservableProperty] private string? _domain;
-    [ObservableProperty] private string? _registrar;
-    [ObservableProperty] private bool _isAvailable;
-    [ObservableProperty] private string? _dollarsPerYear;
-    [ObservableProperty] private string _notes = "";
+    private string? _currentDomain;
+    private string? _registrar;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private Domain? _domain;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private Offer? _offer;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private string _dollarsPerYear = "";
 
     public ViewModel()
     {
+        string[] domains =
+        {
+            "albi",
+            "alb1",
+            "albert",
+            "albrt",
+            "albertrn"
+        };
+        string[] tlds = { "io", "hu", "dev", "me", "gg", "net", "com" };
+
+        _possibleDomains = new string[domains.Length * tlds.Length];
+        for (int i = 0; i < domains.Length; i++)
+        {
+            string domain = domains[i];
+            for (int j = 0; j < tlds.Length; j++)
+            {
+                string tld = tlds[j];
+                _possibleDomains[i * tlds.Length + j] = domain + "." + tld;
+            }
+        }
+
         Process process = Process.GetProcessesByName("chrome").First();
         UIA3Automation automation = new();
         Application application = Application.Attach(process);
@@ -35,10 +63,14 @@ public partial class ViewModel : ObservableObject
     }
 
     public ObservableCollection<Offer> Offers { get; } = new();
+    public ObservableCollection<string> NotChecked { get; } = new();
+    public ObservableCollection<string> Checked { get; } = new();
+    public ObservableCollection<Stat> RegistrarStats { get; } = new();
 
     private async void Main()
     {
         await _db.Database.MigrateAsync();
+        await UpdateChecked();
 
         while (true)
         {
@@ -57,70 +89,123 @@ public partial class ViewModel : ObservableObject
         {
             if (uri.AbsolutePath.Length < 2) return;
             string domain = uri.AbsolutePath[1..];
-            if (domain == Domain) return;
-            Domain = domain;
+            if (domain == _currentDomain) return;
+            _currentDomain = domain;
+            await UpdateDomain();
             await UpdateOffers();
-            await UpdateCurrent();
-            IsAvailable = (await _db.Domains.FindAsync(Domain))?.IsAvailable ?? false;
+            await UpdateRegistrarStats();
+            await UpdateOffer();
         }
-
-        if (Registrar != uri.Authority)
+        
+        if (_registrar != uri.Authority)
         {
-            Registrar = uri.Authority;
-            await UpdateCurrent();
+            _registrar = uri.Authority;
+            await UpdateOffer();
         }
     }
 
     private async Task UpdateOffers()
     {
-        Offer[] offers =
-            await _db.Offers.Where(o => o.DomainId == Domain).OrderBy(o => o.DollarsPerYear).ToArrayAsync();
         Offers.Clear();
+
+        if (Domain == null) return;
+
+        Offer[] offers = await _db.Offers
+            .Where(o => o.DomainId == Domain.Id)
+            .OrderBy(o => o.DollarsPerYear)
+            .ToArrayAsync();
         foreach (Offer offer in offers) Offers.Add(offer);
     }
 
-    [RelayCommand]
-    private async Task SaveOffer()
+    public bool CanSave()
     {
-        if (string.IsNullOrWhiteSpace(Domain)) return;
-        
-        Domain? domain = await _db.Domains.FindAsync(Domain);
-        if (domain == null)
-            _db.Domains.Add(new(Domain, IsAvailable));
-        else
-            domain.IsAvailable = IsAvailable;
-        
-        if (!float.TryParse(DollarsPerYear, out float dollarsPerYear)) return;
-        if (string.IsNullOrWhiteSpace(Registrar)) return;
-
-        Offer? offer = await _db.Offers.FindAsync(Domain, Registrar);
-        if (offer != null)
-        {
-            offer.DollarsPerYear = dollarsPerYear;
-            offer.Notes = Notes;
-        }
-        else
-            _db.Offers.Add(new(Domain, Registrar, dollarsPerYear, Notes));
-
-
-        await _db.SaveChangesAsync();
-
-        await UpdateOffers();
+        if (Domain == null) return false;
+        return Offer == null || float.TryParse(DollarsPerYear, out _);
     }
 
-    private async Task UpdateCurrent()
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
     {
-        if (Registrar == "domainr.com")
+        if (Offer != null)
         {
-            IsAvailable = false;
+            float dollarsPerYear = float.Parse(DollarsPerYear);
+            Offer!.DollarsPerYear = dollarsPerYear;
+            if (!_db.Offers.Contains(Offer))
+                _db.Add(Offer);
+        }
+
+        if (!_db.Domains.Contains(Domain))
+            _db.Add(Domain!);
+
+        await _db.SaveChangesAsync();
+        await UpdateOffers();
+        await UpdateChecked();
+    }
+
+    private async Task UpdateDomain()
+    {
+        Domain = _currentDomain != null
+            ? await _db.Domains.FindAsync(_currentDomain) ?? new(_currentDomain, false)
+            : null;
+    }
+
+    private async Task UpdateOffer()
+    {
+        if (_currentDomain == null || _registrar == null || _registrar.Contains("domainr"))
+        {
+            Offer = null;
             DollarsPerYear = "";
-            Notes = "";
             return;
         }
 
-        Offer? offer = await _db.Offers.FindAsync(Domain, Registrar);
-        
-        DollarsPerYear = offer?.DollarsPerYear.ToString(CultureInfo.InvariantCulture);
-        Notes = offer?.Notes ?? "";
+        Offer = await _db.Offers.FindAsync(_currentDomain, _registrar);
+
+        if (Offer == null)
+        {
+            Offer = new(_currentDomain, _registrar, 0, "");
+            DollarsPerYear = "";
+        }
+        else
+            DollarsPerYear = Offer.DollarsPerYear.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private async Task UpdateChecked()
+    {
+        NotChecked.Clear();
+        Checked.Clear();
+
+        List<string> @checked = await _db.Domains.OrderBy(d => d.Id).Select(d => d.Id).ToListAsync();
+        foreach (string possibleDomain in _possibleDomains)
+        {
+            if (@checked.BinarySearch(possibleDomain) < 0)
+                NotChecked.Add(possibleDomain);
+            else
+                Checked.Add(possibleDomain);
+        }
+    }
+
+    private async Task UpdateRegistrarStats()
+    {
+        RegistrarStats.Clear();
+        if (string.IsNullOrWhiteSpace(_currentDomain) || !_currentDomain.Contains('.')) return;
+
+        string tld = '.' + _currentDomain.Split('.')[1];
+        List<Stat> stats = await _db.Offers
+            .Where(o => o.DomainId.EndsWith(tld))
+            .GroupBy(o => o.Registrar)
+            .OrderBy(g => g.Min(o => o.DollarsPerYear))
+            .Select(g => new Stat(
+                g.Key,
+                g.Min(o => o.DollarsPerYear),
+                g.Max(o => o.DollarsPerYear),
+                g.Average(o => o.DollarsPerYear)
+            ))
+            .ToListAsync();
+        foreach (Stat stat in stats)
+        {
+            RegistrarStats.Add(stat);
+        }
     }
 }
+
+public record Stat(string Registrar, float Min, float Max, float Avg);

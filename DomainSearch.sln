@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainSearch", "DomainSearc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainSearch.Data", "DomainSearch.Data\DomainSearch.Data.csproj", "{66C8A15F-69DE-468D-A2D3-C22F4F0A67B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainSearch.Console", "DomainSearch.Console\DomainSearch.Console.csproj", "{B0B0036D-D22B-46C1-A0C9-C5046DA76E5F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{66C8A15F-69DE-468D-A2D3-C22F4F0A67B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66C8A15F-69DE-468D-A2D3-C22F4F0A67B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{66C8A15F-69DE-468D-A2D3-C22F4F0A67B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0B0036D-D22B-46C1-A0C9-C5046DA76E5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0B0036D-D22B-46C1-A0C9-C5046DA76E5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0B0036D-D22B-46C1-A0C9-C5046DA76E5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0B0036D-D22B-46C1-A0C9-C5046DA76E5F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
